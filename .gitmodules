@@ -1,0 +1,3 @@
+[submodule "node-virtual-gamepads"]
+	path = node-virtual-gamepads
+	url = git@github.com:jehervy/node-virtual-gamepads.git
