@@ -8,15 +8,20 @@ import sys
 from logging.handlers import RotatingFileHandler
 
 # Setup logging
+log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 log_handler = RotatingFileHandler("app.log", maxBytes=5*1024*1024, backupCount=1)  # 5 MB max size
-log_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+log_handler.setFormatter(log_formatter)
 log_handler.setLevel(logging.DEBUG)
+
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(log_formatter)
+console_handler.setLevel(logging.DEBUG)
 
 logging.basicConfig(
     level=logging.DEBUG,
     handlers=[
         log_handler,
-        logging.StreamHandler(sys.stdout),
+        console_handler
     ],
 )
 
@@ -41,6 +46,9 @@ def main() -> None:
     parser.add_argument(
         "--fps", type=int, default=30, help="frequency of frames per second"
     )
+    parser.add_argument(
+        "--turn-off-leds", action="store_true", help="Turn off all LEDs and exit"
+    )
     args = parser.parse_args()
 
     pygame.init()
@@ -55,7 +63,9 @@ def main() -> None:
     try:
         # Initialize the LED matrix
         matrix = LEDMatrix(width, height, led_count, pin, args.pixel_width, args.pixel_height, simulate=simulate)
-
+        if args.turn_off_leds:
+            return
+        
         # Menu options
         app_items = [
             ClockApp(matrix, target_fps=args.fps),

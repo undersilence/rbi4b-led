@@ -8,6 +8,7 @@ import math
 
 class ScreenTestApp(BaseApp):
     ICON = [" ######", " #    #", " #    #", " #    #", " #    #", " #    #", " ######"]
+    EFFECT_DURATION = 300
 
     def reset(self):
         self.clear_before_render = False  # No need to clean the screen before rendering
@@ -28,7 +29,7 @@ class ScreenTestApp(BaseApp):
                     self.effect_index = (self.effect_index + 1) % len(self.effects)
 
         self.effect_timer += delta_time
-        if self.effect_timer > 10:  # Change effect every 10 seconds
+        if self.effect_timer > self.EFFECT_DURATION:  # Change effect every 10 seconds
             self.effect_timer = 0
             self.effect_index = (self.effect_index + 1) % len(self.effects)
 
