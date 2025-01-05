@@ -69,13 +69,13 @@ class InputManager:
             )
             self.button_states[joystick_id] = current_button_states
 
-            if (
-                self.previous_button_states[joystick_id]
-                != self.button_states[joystick_id]
-            ):
-                logging.debug(
-                    f"Joystick {joystick_id} button states: {current_button_states}"
-                )
+            # if (
+            #     self.previous_button_states[joystick_id]
+            #     != self.button_states[joystick_id]
+            # ):
+            #     logging.debug(
+            #         f"Joystick {joystick_id} button states: {current_button_states}"
+            #     )
 
             current_axis_states = [js.get_axis(i) for i in range(js.get_numaxes())]
             self.axis_states[joystick_id] = current_axis_states

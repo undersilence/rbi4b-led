@@ -66,6 +66,8 @@ class TetrisApp(BaseApp):
         self.lines_to_clear = []
         self.rotation_state = 0
         self.move_direction = 0  # 0: no movement, -1: left, 1: right
+        self.offset_x = 0
+        self.hard_drop_ready = True
 
     def _new_piece(self) -> Tuple[List[List[int]], Tuple[int, int, int]]:
         return random.choice(list(TETROMINOS.values()))
@@ -182,17 +184,20 @@ class TetrisApp(BaseApp):
         else:
             self.move_direction = 0
 
-        if axis_1 < -0.8:  # Hard drop
+        if axis_1 < -0.8 and self.hard_drop_ready:  # Hard drop
             while self._valid_position(self.current_piece, self.piece_x, self.piece_y + 1):
                 self.piece_y += 1
-            self.drop_timer = self.drop_timer + self.drop_timer  # Force merge
+            self.drop_timer = self.drop_timer * 2 # Force immediate merge
+            self.hard_drop_ready = False
         elif axis_1 > 0.8 and self._valid_position(self.current_piece, self.piece_x, self.piece_y + 1):  # Soft drop
             self.piece_y += 1
+        elif axis_1 > -0.1:
+            self.hard_drop_ready = True
 
         if self.game_over:
             self.show_score_timer -= delta_time
             if self.show_score_timer <= 0:
-                self.reset()
+                self.reset_game_state()
                 self.game_over = False
             return
 
@@ -205,9 +210,13 @@ class TetrisApp(BaseApp):
         self.drop_timer += delta_time
 
         if self.move_direction == -1 and self._valid_position(self.current_piece, self.piece_x - 1, self.piece_y):
-            self.piece_x -= 0.2
+            self.offset_x -= 0.5
         elif self.move_direction == 1 and self._valid_position(self.current_piece, self.piece_x + 1, self.piece_y):
-            self.piece_x += 0.2
+            self.offset_x += 0.5
+            
+        if abs(self.offset_x) >= 1.0:
+            self.piece_x += int(self.offset_x)
+            self.offset_x -= int(self.offset_x)
 
         if self.drop_timer >= self.drop_interval:
             self.drop_timer = 0
@@ -244,7 +253,7 @@ class TetrisApp(BaseApp):
             for y, row in enumerate(self.current_piece):
                 for x, cell in enumerate(row):
                     if cell:
-                        self.matrix.set_pixel(self.piece_x + x, self.piece_y + y, self.current_color)  # Current piece color
+                        self.matrix.set_pixel(int(self.piece_x) + x, int(self.piece_y) + y, self.current_color)  # Current piece color
 
     def _show_score(self) -> None:
         score_str = f"{self.score}"

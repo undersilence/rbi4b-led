@@ -100,7 +100,7 @@ class BaseApp:
     def execute(self) -> None:
         delta_time_ms = 0
         self.keep_running = True
-        self.bind_device()
+        self.connect_device()
         self.reset()
         logging.info(f"Running {self.info()} with fps={self.target_fps}")
 
@@ -130,13 +130,20 @@ class BaseApp:
 
     def on_remove_joystick(self, joystick) -> None:
         self._input_manager.remove_joystick(joystick)
-        self.bind_device()
+        self.disconnect_device(joystick.get_id())
 
     def on_add_joystick(self, joystick) -> None:
         self._input_manager.add_joystick(joystick)
-        self.bind_device()
+        self.connect_device()
 
-    def bind_device(self) -> None:
+    def disconnect_device(self, joystick_id) -> None:
+        for i in range(len(self._input_devices)):
+            if self._input_devices[i] == joystick_id:
+                self._input_devices[i] = None
+        
+        self._available_devices = [joystick_id for joystick_id in self._input_devices if joystick_id is not None]
+
+    def connect_device(self) -> None:
         joystick_ids = self._input_manager.get_joystick_ids()
 
         for i in range(len(self._input_devices)):
@@ -145,8 +152,6 @@ class BaseApp:
                     if joystick_id not in self._input_devices:
                         self._input_devices[i] = joystick_id
                         break
-            elif (self._input_devices[i] not in joystick_ids):
-                self._input_devices[i] = None
                     
         self._available_devices = [joystick_id for joystick_id in self._input_devices if joystick_id is not None]
         
