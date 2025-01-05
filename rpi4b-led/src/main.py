@@ -84,6 +84,10 @@ def main() -> None:
             args.pixel_height,
             simulate=simulate,
         )
+
+        matrix.clear()
+        matrix.show()
+
         if args.turn_off_leds:
             return
 
