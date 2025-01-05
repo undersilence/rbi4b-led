@@ -130,22 +130,14 @@ class BaseApp:
 
     def on_remove_joystick(self, joystick) -> None:
         self._input_manager.remove_joystick(joystick)
-        joystick_id = joystick.get_id()
-        for i in range(len(self._input_devices)):
-            if self._input_devices[i] == joystick_id:
-                self._input_devices[i] = None
-                self.bind_device(i)
+        self.bind_device()
 
     def on_add_joystick(self, joystick) -> None:
         self._input_manager.add_joystick(joystick)
         self.bind_device()
 
-    def bind_device(self, device_index=None) -> None:
+    def bind_device(self) -> None:
         joystick_ids = self._input_manager.get_joystick_ids()
-
-        if device_index is not None:
-            if self._input_devices[device_index] not in joystick_ids:
-                self._input_devices[device_index] = None
 
         for i in range(len(self._input_devices)):
             if self._input_devices[i] is None:
@@ -153,6 +145,8 @@ class BaseApp:
                     if joystick_id not in self._input_devices:
                         self._input_devices[i] = joystick_id
                         break
+            elif (self._input_devices[i] not in joystick_ids):
+                self._input_devices[i] = None
                     
         self._available_devices = [joystick_id for joystick_id in self._input_devices if joystick_id is not None]
         
@@ -205,5 +199,5 @@ class BaseApp:
     def get_axes(self, device_index: int = -1):
         joystick_id = self.get_joystick_id(device_index)
         if joystick_id is None:
-            return False
+            return [0, 0]
         return self._input_manager.get_axes(joystick_id)

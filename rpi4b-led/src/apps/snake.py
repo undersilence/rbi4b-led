@@ -84,7 +84,7 @@ class SnakeApp(BaseApp):
 
         if self.food_timer >= self.food_interval and len(self.food) < 3:
             self.food_timer = 0
-            self.food_interval = random.uniform(3, 5)  # Reset food interval
+            self.food_interval = random.uniform(3, 4)  # Reset food interval
             self.food.append(self._generate_food())
 
         if self.move_timer >= self.move_interval:

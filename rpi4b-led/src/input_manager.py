@@ -121,6 +121,7 @@ class InputManager:
     def remove_joystick(self, joystick: pygame.joystick.Joystick) -> None:
         joystick_id = joystick.get_id()
         self._joysticks.remove(joystick)
+        
         del self.button_states[joystick_id]
         del self.axis_states[joystick_id]
         del self.previous_button_states[joystick_id]

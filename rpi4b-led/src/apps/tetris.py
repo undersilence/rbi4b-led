@@ -182,11 +182,11 @@ class TetrisApp(BaseApp):
         else:
             self.move_direction = 0
 
-        if axis_1 < -0.5:  # Hard drop
+        if axis_1 < -0.8:  # Hard drop
             while self._valid_position(self.current_piece, self.piece_x, self.piece_y + 1):
                 self.piece_y += 1
             self.drop_timer = self.drop_timer + self.drop_timer  # Force merge
-        elif axis_1 > 0.5 and self._valid_position(self.current_piece, self.piece_x, self.piece_y + 1):  # Soft drop
+        elif axis_1 > 0.8 and self._valid_position(self.current_piece, self.piece_x, self.piece_y + 1):  # Soft drop
             self.piece_y += 1
 
         if self.game_over:
@@ -205,9 +205,9 @@ class TetrisApp(BaseApp):
         self.drop_timer += delta_time
 
         if self.move_direction == -1 and self._valid_position(self.current_piece, self.piece_x - 1, self.piece_y):
-            self.piece_x -= 1
+            self.piece_x -= 0.2
         elif self.move_direction == 1 and self._valid_position(self.current_piece, self.piece_x + 1, self.piece_y):
-            self.piece_x += 1
+            self.piece_x += 0.2
 
         if self.drop_timer >= self.drop_interval:
             self.drop_timer = 0
