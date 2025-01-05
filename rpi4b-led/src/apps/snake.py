@@ -12,6 +12,7 @@ from pygame import (
     JOYBUTTONUP,
     JOYAXISMOTION,
     K_ESCAPE,
+    key,
 )
 from led_matrix import LEDMatrix
 from .base import BaseApp, GamepadButtons, FONT, VfxUtils
@@ -23,7 +24,8 @@ class SnakeApp(BaseApp):
 
     def reset(self) -> None:
         self.reset_game_state()
-
+        self.bind_joysticks()
+        
     def reset_game_state(self) -> None:
         self.snake: List[Tuple[int, int]] = [(5, 5), (4, 5), (3, 5)]
         self.direction = (1, 0)  # Initial direction: right
@@ -49,42 +51,27 @@ class SnakeApp(BaseApp):
             )
             if food not in self.snake and food not in self.food:
                 return food
-
+    
     def update(self, delta_time: float) -> None:
+        if self.is_holding(GamepadButtons.A):
+            self.speed_multiplier = 2
+        else:
+            self.speed_multiplier = 1
 
-        for e in event.get():
-            if e.type == KEYDOWN:
-                if e.key == K_UP and self.direction != (0, 1):
-                    self.direction = (0, -1)
-                elif e.key == K_DOWN and self.direction != (0, -1):
-                    self.direction = (0, 1)
-                elif e.key == K_LEFT and self.direction != (1, 0):
-                    self.direction = (-1, 0)
-                elif e.key == K_RIGHT and self.direction != (-1, 0):
-                    self.direction = (1, 0)
-                elif e.key == K_ESCAPE:
-                    self.keep_running = False
-            elif e.type == JOYBUTTONDOWN:
-                if e.button == GamepadButtons.A:
-                    self.speed_multiplier = 2
-                elif e.button == GamepadButtons.START:  # restart
-                    self.reset_game_state()
-                elif e.button == GamepadButtons.BACK:
-                    self.keep_running = False
-            elif e.type == JOYBUTTONUP:
-                if e.button == GamepadButtons.A:
-                    self.speed_multiplier = 1
-            elif e.type == JOYAXISMOTION:
-                if e.axis == 0:  # Horizontal axis
-                    if e.value < -0.5 and self.direction != (1, 0):  # Left
-                        self.direction = (-1, 0)
-                    elif e.value > 0.5 and self.direction != (-1, 0):  # Right
-                        self.direction = (1, 0)
-                elif e.axis == 1:  # Vertical axis
-                    if e.value < -0.5 and self.direction != (0, 1):  # Up
-                        self.direction = (0, -1)
-                    elif e.value > 0.5 and self.direction != (0, -1):  # Down
-                        self.direction = (0, 1)
+        if self.is_pressed(GamepadButtons.START):
+            self.reset_game_state()
+        elif self.is_pressed(GamepadButtons.BACK):
+            self.keep_running = False
+
+        axis_0, axis_1 = self.get_axes()
+        if axis_0 < -0.5 and self.direction != (1, 0):  # Left
+            self.direction = (-1, 0)
+        elif axis_0 > 0.5 and self.direction != (-1, 0):  # Right
+            self.direction = (1, 0)
+        if axis_1 < -0.5 and self.direction != (0, 1):  # Up
+            self.direction = (0, -1)
+        elif axis_1 > 0.5 and self.direction != (0, -1):  # Down
+            self.direction = (0, 1)
 
         if self.game_over:
             self.show_score_timer -= delta_time
@@ -113,7 +100,7 @@ class SnakeApp(BaseApp):
                 and 0 <= new_head[1] < self.matrix.height
             ):
                 self.game_over = True  # Snake collided with itself or the wall
-                self.show_score_timer = 3  # Show score for 5 seconds
+                self.show_score_timer = 3  # Show score for 3 seconds
             else:
                 self.snake.insert(0, new_head)
                 if new_head in self.food:

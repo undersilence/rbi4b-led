@@ -1,10 +1,11 @@
 import time
 import math
 from typing import List, Tuple
-from pygame import event, KEYDOWN, K_ESCAPE, JOYBUTTONDOWN
+from pygame import key, K_ESCAPE
 from led_matrix import LEDMatrix
 
 from .base import BaseApp, GamepadButtons, FONT, VfxUtils
+from input_manager import InputManager
 
 
 class ClockApp(BaseApp):
@@ -14,14 +15,10 @@ class ClockApp(BaseApp):
     padding = [1, 1, 0, 0, 0, 0, 0, 0, 1, 0]
 
     def update(self, delta_time: float) -> None:
-        for e in event.get():
-            if e.type == KEYDOWN:
-                if e.key == K_ESCAPE:
-                    self.keep_running = False
-            elif e.type == JOYBUTTONDOWN:
-                if e.button == GamepadButtons.BACK:
-                    self.keep_running = False
-
+        
+        if self.is_pressed(GamepadButtons.BACK):
+            self.keep_running = False
+        
         now = time.localtime()
         self.current_hour = now.tm_hour
         self.current_minute = now.tm_min

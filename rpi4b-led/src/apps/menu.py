@@ -1,28 +1,23 @@
 from typing import List
-from pygame import Color, event, KEYDOWN, JOYBUTTONDOWN
 import pygame
 import logging
 
 from .base import BaseApp, GamepadButtons
+from input_manager import InputManager
 from led_matrix import LEDMatrix
 
 
 class MenuApp(BaseApp):
-    def __init__(
-        self,
-        apps: List[BaseApp],
-        matrix: LEDMatrix,
-        target_fps=30,
-        clear_before_render=True,
-    ) -> None:
-        super().__init__(matrix, target_fps, clear_before_render)
-        self.apps = apps
-        self.joysticks = []
-        for i in range(pygame.joystick.get_count()):
-            joystick = pygame.joystick.Joystick(i)
-            joystick.init()
-            self.joysticks.append(joystick)
-            logging.info(f"Joystick {joystick.get_name()} added.")
+    
+    def __init__(self, matrix, target_fps=30, clear_before_render=True):
+        super().__init__(matrix, target_fps=target_fps, clear_before_render=clear_before_render)
+        self.apps: List[BaseApp] = []
+        self.input_manager = InputManager()
+
+    def reg_app(self, app: BaseApp) -> None:
+        if not isinstance(app, BaseApp):
+            raise ValueError("app must be an instance of BaseApp")
+        self.apps.append(app)
 
     def reset(self) -> None:
         self.current_row = 0
@@ -32,46 +27,18 @@ class MenuApp(BaseApp):
         self.direction = 0  # -1 for left, 1 for right
 
     def update(self, delta_time: float) -> None:
-        for e in pygame.event.get():
-            if e.type == pygame.JOYDEVICEADDED:
-                joystick = pygame.joystick.Joystick(e.device_index)
-                joystick.init()
-                self.joysticks.append(joystick)
-                logging.info(f"Joystick {joystick.get_name()} added.")
-            elif e.type == pygame.JOYDEVICEREMOVED:
-                for joystick in self.joysticks:
-                    if joystick.get_instance_id() == e.instance_id:
-                        logging.info(f"Joystick {joystick.get_name()} removed.")
-                        self.joysticks.remove(joystick)
-            elif e.type == JOYBUTTONDOWN:
-                if e.button == GamepadButtons.A:  # Confirm button
-                    if self.current_row < len(self.apps):
-                        self.apps[self.current_row].execute()
-            elif e.type == KEYDOWN:
-                if e.key == pygame.K_LEFT:
-                    self.target_row = self.current_row - 1
-                    self.direction = -1
-                elif e.key == pygame.K_RIGHT:
-                    self.target_row = self.current_row + 1
-                    self.direction = 1
-                elif e.key == pygame.K_RETURN:
-                    if self.current_row < len(self.apps):
-                        self.apps[self.current_row].execute()
-            elif e.type == pygame.JOYHATMOTION:
-                if e.value[0] == -1:  # Left
-                    self.target_row = self.current_row - 1
-                    self.direction = -1
-                elif e.value[0] == 1:  # Right
-                    self.target_row = self.current_row + 1
-                    self.direction = 1
-            elif e.type == pygame.JOYAXISMOTION:
-                if e.axis == 0:  # Horizontal axis
-                    if e.value < -0.5:  # Left
-                        self.target_row = self.current_row - 1
-                        self.direction = -1
-                    elif e.value > 0.5:  # Right
-                        self.target_row = self.current_row + 1
-                        self.direction = 1
+
+        if self.is_pressed(GamepadButtons.A):  # Confirm button
+            if self.current_row < len(self.apps):
+                self.apps[self.current_row].execute()
+                
+        axis_value = self.get_axis(0)  # Horizontal axis
+        if axis_value < -0.5:  # Left
+            self.target_row = self.current_row - 1
+            self.direction = -1
+        elif axis_value > 0.5:  # Right
+            self.target_row = self.current_row + 1
+            self.direction = 1
 
         self.target_row = (self.target_row + len(self.apps)) % len(self.apps)
 

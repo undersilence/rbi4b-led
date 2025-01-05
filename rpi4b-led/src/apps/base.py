@@ -1,24 +1,11 @@
+import functools
 import time
 import pygame
 from led_matrix import LEDMatrix
 import math
-from typing import List, Tuple
-
+from typing import List, Tuple, Dict
 import logging
-
-class GamepadButtons:
-    A = 0
-    B = 1
-    X = 2
-    Y = 3
-    LB = 4
-    RB = 5
-    BACK = 6
-    START = 7
-    GUIDE = 8
-    LEFTSTICK = 9
-    RIGHTSTICK = 10
-
+from input_manager import InputManager, GamepadButtons
 
 FONT = {
     "0": ["###", "# #", "# #", "# #", "###"],
@@ -77,7 +64,9 @@ class VfxUtils:
 
     @staticmethod
     def breath_curve(t: float, duration: float, freq: float = 1) -> float:
-        index = int((t * freq / duration) * len(VfxUtils.BREATH_CURVE_TABLE)) % len(VfxUtils.BREATH_CURVE_TABLE)
+        index = int((t * freq / duration) * len(VfxUtils.BREATH_CURVE_TABLE)) % len(
+            VfxUtils.BREATH_CURVE_TABLE
+        )
         return VfxUtils.BREATH_CURVE_TABLE[index]
 
     @staticmethod
@@ -92,17 +81,6 @@ class VfxUtils:
             pos -= 170
             return (0, pos * 3, 255 - pos * 3)
 
-def wheel(pos: int) -> Tuple[int, int, int]:
-    """Generate rainbow colors across 0-255 positions."""
-    if pos < 85:
-        return (pos * 3, 255 - pos * 3, 0)
-    elif pos < 170:
-        pos -= 85
-        return (255 - pos * 3, 0, pos * 3)
-    else:
-        pos -= 170
-        return (0, pos * 3, 255 - pos * 3)
-
 
 class BaseApp:
     ICON: List[str] = []
@@ -115,19 +93,27 @@ class BaseApp:
         self.clock = pygame.time.Clock()
         self.target_fps = target_fps
         self.clear_before_render = clear_before_render
+        self._input_manager = InputManager()
+        self._input_devices = [None] * 4  # Support up to 4 players
+        self._available_devices = []
 
     def execute(self) -> None:
-        self.keep_running = True
         delta_time_ms = 0
+        self.keep_running = True
+        self.bind_joysticks()
         self.reset()
         logging.info(f"Running {self.info()} with fps={self.target_fps}")
+
         while self.keep_running:
             if self.clear_before_render:
                 self.matrix.clear()
+            self.handle_events()
+            self._input_manager.update()
             self.update(delta_time_ms / 1000.0)
             self.render()
             self.matrix.show()
             delta_time_ms = self.clock.tick(self.target_fps)
+
         logging.info(f"Exiting {self.info()}")
 
     def reset(self) -> None:
@@ -141,3 +127,83 @@ class BaseApp:
 
     def info(self) -> str:
         return self.__class__.__name__
+
+    def on_remove_joystick(self, joystick) -> None:
+        joystick_id = joystick.get_id()
+        for i in range(len(self._input_devices)):
+            if self._input_devices[i] == joystick_id:
+                self._input_devices[i] = None
+                self.bind_joysticks(i)
+
+    def on_add_joystick(self, joystick) -> None:
+        self.bind_joysticks()
+
+    def bind_joysticks(self, device_index=None) -> None:
+        joystick_ids = self._input_manager.get_joystick_ids()
+
+        if device_index is not None:
+            if self._input_devices[device_index] not in joystick_ids:
+                self._input_devices[device_index] = None
+
+        for i in range(len(self._input_devices)):
+            if self._input_devices[i] is None:
+                for joystick_id in joystick_ids:
+                    if joystick_id not in self._input_devices:
+                        self._input_devices[i] = joystick_id
+                        break
+                    
+        self._available_devices = [joystick_id for joystick_id in self._input_devices if joystick_id is not None]
+        
+    def handle_events(self) -> None:
+        for e in pygame.event.get():
+            if e.type == pygame.JOYDEVICEADDED:
+                joystick = pygame.joystick.Joystick(e.device_index)
+                joystick.init()
+                self._input_manager.add_joystick(joystick)
+                self.on_add_joystick(joystick)
+                logging.info(f"Joystick {joystick.get_name()} added.")
+
+            elif e.type == pygame.JOYDEVICEREMOVED:
+                for joystick in self._input_manager._joysticks:
+                    if joystick.get_instance_id() == e.instance_id:
+                        self._input_manager.remove_joystick(joystick)
+                        self.on_remove_joystick(joystick)
+                        logging.info(f"Joystick {joystick.get_name()} removed.")
+    
+    def get_joystick_id(self, device_index: int = -1) -> int:
+        """
+        Get the joystick ID for the player at the given index, if default value is used, return the first available player ID.
+        """
+        if device_index < 0:
+            self._available_devices[0] if self._available_devices else None
+        return self._input_devices[device_index]
+    
+    def is_pressed(self, button, device_index: int = -1):
+        joystick_id = self.get_joystick_id(device_index)
+        if joystick_id is None:
+            return False
+        return self._input_manager.is_pressed(joystick_id, button)
+
+    def is_holding(self, button, device_index: int = -1):
+        joystick_id = self.get_joystick_id(device_index)
+        if joystick_id is None:
+            return False
+        return self._input_manager.is_holding(joystick_id, button)
+    
+    def is_released(self, button, device_index: int = -1):
+        joystick_id = self.get_joystick_id(device_index)
+        if joystick_id is None:
+            return False
+        return self._input_manager.is_released(joystick_id, button)
+    
+    def get_axis(self, axis: int, device_index: int = -1):
+        joystick_id = self.get_joystick_id(device_index)
+        if joystick_id is None:
+            return False
+        return self._input_manager.get_axis(joystick_id, axis)
+    
+    def get_axes(self, device_index: int = -1):
+        joystick_id = self.get_joystick_id(device_index)
+        if joystick_id is None:
+            return False
+        return self._input_manager.get_axis(joystick_id)

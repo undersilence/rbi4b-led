@@ -1,19 +1,10 @@
 import random
 import math
 from typing import List, Tuple
-from pygame import (
-    event,
-    KEYDOWN,
-    K_LEFT,
-    K_RIGHT,
-    K_DOWN,
-    K_UP,
-    JOYBUTTONDOWN,
-    JOYAXISMOTION,
-    K_ESCAPE,
-)
+from pygame import key, K_LEFT, K_RIGHT, K_DOWN, K_UP, K_ESCAPE
 from led_matrix import LEDMatrix
 from .base import BaseApp, GamepadButtons, FONT, VfxUtils
+from input_manager import InputManager
 
 # Define the shapes and colors of the Tetris pieces
 TETROMINOS = {
@@ -170,56 +161,33 @@ class TetrisApp(BaseApp):
                 self.rotation_state = new_rotation_state
                 return True
         return False
-
+    
     def update(self, delta_time: float) -> None:
-        for e in event.get():
-            if e.type == KEYDOWN:
-                if e.key == K_LEFT and self._valid_position(
-                    self.current_piece, self.piece_x - 1, self.piece_y
-                ):
-                    self.piece_x -= 1
-                elif e.key == K_RIGHT and self._valid_position(
-                    self.current_piece, self.piece_x + 1, self.piece_y
-                ):
-                    self.piece_x += 1
-                elif e.key == K_DOWN and self._valid_position(
-                    self.current_piece, self.piece_x, self.piece_y + 1
-                ):
-                    self.piece_y += 1
-                elif e.key == K_UP:
-                    self._try_rotate(clockwise=True)
-                elif e.key == K_ESCAPE:
-                    self.keep_running = False
-            elif e.type == JOYBUTTONDOWN:
-                if e.button == GamepadButtons.A:
-                    self._try_rotate(clockwise=True)
-                elif e.button == GamepadButtons.B:
-                    self._try_rotate(clockwise=False)
-                elif e.button == GamepadButtons.START:  # restart
-                    self.reset_game_state()
-                elif e.button == GamepadButtons.BACK:
-                    self.keep_running = False
-            elif e.type == JOYAXISMOTION:
-                if e.axis == 0:  # Horizontal axis
-                    if e.value < -0.5:
-                        self.move_direction = -1
-                    elif e.value > 0.5:
-                        self.move_direction = 1
-                    else:
-                        self.move_direction = 0
-                elif e.axis == 1:  # Vertical axis
-                    if e.value < -0.5:  # Hard drop
-                        while self._valid_position(
-                            self.current_piece, self.piece_x, self.piece_y + 1
-                        ):
-                            self.piece_y += 1
-                        self.drop_timer = (
-                            self.drop_timer + self.drop_timer
-                        )  # Force merge
-                    elif e.value > 0.5 and self._valid_position(
-                        self.current_piece, self.piece_x, self.piece_y + 1
-                    ):  # Soft drop
-                        self.piece_y += 1
+        if self.is_pressed(GamepadButtons.A):
+            self._try_rotate(clockwise=True)
+        elif self.is_pressed(GamepadButtons.B):
+            self._try_rotate(clockwise=False)
+        elif self.is_pressed(GamepadButtons.START):
+            self.reset_game_state()
+        elif self.is_pressed(GamepadButtons.BACK):
+            self.keep_running = False
+
+        # Handle joystick axis motion
+        axis_0, axis_1 = self.get_axes()
+
+        if axis_0 < -0.5:
+            self.move_direction = -1
+        elif axis_0 > 0.5:
+            self.move_direction = 1
+        else:
+            self.move_direction = 0
+
+        if axis_1 < -0.5:  # Hard drop
+            while self._valid_position(self.current_piece, self.piece_x, self.piece_y + 1):
+                self.piece_y += 1
+            self.drop_timer = self.drop_timer + self.drop_timer  # Force merge
+        elif axis_1 > 0.5 and self._valid_position(self.current_piece, self.piece_x, self.piece_y + 1):  # Soft drop
+            self.piece_y += 1
 
         if self.game_over:
             self.show_score_timer -= delta_time
@@ -236,13 +204,9 @@ class TetrisApp(BaseApp):
 
         self.drop_timer += delta_time
 
-        if self.move_direction == -1 and self._valid_position(
-            self.current_piece, self.piece_x - 1, self.piece_y
-        ):
+        if self.move_direction == -1 and self._valid_position(self.current_piece, self.piece_x - 1, self.piece_y):
             self.piece_x -= 1
-        elif self.move_direction == 1 and self._valid_position(
-            self.current_piece, self.piece_x + 1, self.piece_y
-        ):
+        elif self.move_direction == 1 and self._valid_position(self.current_piece, self.piece_x + 1, self.piece_y):
             self.piece_x += 1
 
         if self.drop_timer >= self.drop_interval:
@@ -252,17 +216,12 @@ class TetrisApp(BaseApp):
             else:
                 self._merge_piece()
                 self._clear_lines()
-                self.current_piece, self.current_color = (
-                    self.next_piece,
-                    self.next_color,
-                )
+                self.current_piece, self.current_color = self.next_piece, self.next_color
                 self.next_piece, self.next_color = self._new_piece()
                 self.piece_x = self.matrix.width // 2 - len(self.current_piece[0]) // 2
                 self.piece_y = -1  # Start above the board
                 self.rotation_state = int(random.uniform(0, 4))  # Random rotation state
-                if not self._valid_position(
-                    self.current_piece, self.piece_x, self.piece_y
-                ):
+                if not self._valid_position(self.current_piece, self.piece_x, self.piece_y):
                     self.game_over = True
                     self.show_score_timer = 3  # Show score for 5 seconds
 
@@ -277,35 +236,21 @@ class TetrisApp(BaseApp):
                     self.matrix.set_pixel(x, y, cell)  # Use the stored color
 
         if self.clear_lines_animation_timer > 0:
-            brightness = VfxUtils.breath_curve(
-                self.clear_lines_animation_timer, 0.5, 1.5
-            )
+            brightness = VfxUtils.breath_curve(self.clear_lines_animation_timer, 0.5, 1.5)
             for y in self.lines_to_clear:
                 for x in range(self.matrix.width):
-                    self.matrix.set_pixel(
-                        x,
-                        y,
-                        (
-                            int(brightness * 255),
-                            int(brightness * 255),
-                            int(brightness * 255),
-                        ),
-                    )  # Breathing effect
+                    self.matrix.set_pixel(x, y, (int(brightness * 255), int(brightness * 255), int(brightness * 255)))  # Breathing effect
         else:
             for y, row in enumerate(self.current_piece):
                 for x, cell in enumerate(row):
                     if cell:
-                        self.matrix.set_pixel(
-                            self.piece_x + x, self.piece_y + y, self.current_color
-                        )  # Current piece color
+                        self.matrix.set_pixel(self.piece_x + x, self.piece_y + y, self.current_color)  # Current piece color
 
     def _show_score(self) -> None:
         score_str = f"{self.score}"
         x_offset = (self.matrix.width - len(score_str) * 4) // 2
         y_offset = (self.matrix.height - 5) // 2  # Center vertically
-        brightness = int(
-            VfxUtils.breath_curve(self.show_score_timer, 3, 2) * 255
-        )  # Breathing effect
+        brightness = int(VfxUtils.breath_curve(self.show_score_timer, 3, 2) * 255)  # Breathing effect
         for i, char in enumerate(score_str):
             pattern = FONT[char]
             color = (brightness, brightness, brightness)
