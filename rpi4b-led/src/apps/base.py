@@ -100,7 +100,7 @@ class BaseApp:
     def execute(self) -> None:
         delta_time_ms = 0
         self.keep_running = True
-        self.bind_joysticks()
+        self.bind_device()
         self.reset()
         logging.info(f"Running {self.info()} with fps={self.target_fps}")
 
@@ -129,16 +129,18 @@ class BaseApp:
         return self.__class__.__name__
 
     def on_remove_joystick(self, joystick) -> None:
+        self._input_manager.remove_joystick(joystick)
         joystick_id = joystick.get_id()
         for i in range(len(self._input_devices)):
             if self._input_devices[i] == joystick_id:
                 self._input_devices[i] = None
-                self.bind_joysticks(i)
+                self.bind_device(i)
 
     def on_add_joystick(self, joystick) -> None:
-        self.bind_joysticks()
+        self._input_manager.add_joystick(joystick)
+        self.bind_device()
 
-    def bind_joysticks(self, device_index=None) -> None:
+    def bind_device(self, device_index=None) -> None:
         joystick_ids = self._input_manager.get_joystick_ids()
 
         if device_index is not None:
@@ -159,14 +161,12 @@ class BaseApp:
             if e.type == pygame.JOYDEVICEADDED:
                 joystick = pygame.joystick.Joystick(e.device_index)
                 joystick.init()
-                self._input_manager.add_joystick(joystick)
                 self.on_add_joystick(joystick)
                 logging.info(f"Joystick {joystick.get_name()} added.")
 
             elif e.type == pygame.JOYDEVICEREMOVED:
                 for joystick in self._input_manager._joysticks:
                     if joystick.get_instance_id() == e.instance_id:
-                        self._input_manager.remove_joystick(joystick)
                         self.on_remove_joystick(joystick)
                         logging.info(f"Joystick {joystick.get_name()} removed.")
     
@@ -175,7 +175,7 @@ class BaseApp:
         Get the joystick ID for the player at the given index, if default value is used, return the first available player ID.
         """
         if device_index < 0:
-            self._available_devices[0] if self._available_devices else None
+            return self._available_devices[0] if self._available_devices else None
         return self._input_devices[device_index]
     
     def is_pressed(self, button, device_index: int = -1):
@@ -206,4 +206,4 @@ class BaseApp:
         joystick_id = self.get_joystick_id(device_index)
         if joystick_id is None:
             return False
-        return self._input_manager.get_axis(joystick_id)
+        return self._input_manager.get_axes(joystick_id)

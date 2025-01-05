@@ -24,7 +24,7 @@ class SnakeApp(BaseApp):
 
     def reset(self) -> None:
         self.reset_game_state()
-        self.bind_joysticks()
+        self.bind_device()
         
     def reset_game_state(self) -> None:
         self.snake: List[Tuple[int, int]] = [(5, 5), (4, 5), (3, 5)]

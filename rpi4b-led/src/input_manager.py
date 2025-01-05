@@ -1,6 +1,8 @@
 import pygame
 from typing import List, Dict
 import logging
+import copy
+
 
 class GamepadButtons:
     A = 0
@@ -11,7 +13,9 @@ class GamepadButtons:
     RB = 5
     BACK = 6
     START = 7
-    
+    NUM = 8
+
+
 class InputManager:
     _instance = None
 
@@ -24,10 +28,23 @@ class InputManager:
     def __init__(self, joysticks: List[pygame.joystick.Joystick] = None) -> None:
         if self._initialized:
             return
+        
         self._joysticks = joysticks or []
-        self.button_states: Dict[int, Dict[int, bool]] = {js.get_id(): {button: False for button in range(10)} for js in self._joysticks}
-        self.axis_states: Dict[int, List[float]] = {js.get_id(): [0.0] * js.get_numaxes() for js in self._joysticks}
-        self.previous_button_states: Dict[int, Dict[int, bool]] = {js.get_id(): {button: False for button in range(10)} for js in self._joysticks}
+        self.button_states: Dict[int, Dict[int, bool]] = {
+            js.get_id(): {
+                button: js.get_button(button) for button in range(GamepadButtons.NUM)
+            }
+            for js in self._joysticks
+        }
+        self.previous_button_states: Dict[int, Dict[int, bool]] = {
+            js.get_id(): {
+                button: js.get_button(button) for button in range(GamepadButtons.NUM)
+            }
+            for js in self._joysticks
+        }
+        self.axis_states: Dict[int, List[float]] = {
+            js.get_id(): [0.0] * js.get_numaxes() for js in self._joysticks
+        }
         self._initialized = True
 
     def update(self) -> None:
@@ -47,36 +64,59 @@ class InputManager:
                 GamepadButtons.START: js.get_button(GamepadButtons.START),
             }
 
-            self.previous_button_states[joystick_id] = self.button_states[joystick_id]
+            self.previous_button_states[joystick_id].update(
+                self.button_states[joystick_id]
+            )
             self.button_states[joystick_id] = current_button_states
 
-            if (self.previous_button_states[joystick_id] != self.button_states[joystick_id]):
-                logging.debug(f"Joystick {joystick_id} button states: {current_button_states}")
-                
+            if (
+                self.previous_button_states[joystick_id]
+                != self.button_states[joystick_id]
+            ):
+                logging.debug(
+                    f"Joystick {joystick_id} button states: {current_button_states}"
+                )
+
             current_axis_states = [js.get_axis(i) for i in range(js.get_numaxes())]
             self.axis_states[joystick_id] = current_axis_states
 
     def is_pressed(self, joystick_id: int, button: int) -> bool:
-        return self.button_states[joystick_id][button] and not self.previous_button_states[joystick_id][button]
+        return (
+            self.button_states[joystick_id][button]
+            and not self.previous_button_states[joystick_id][button]
+        )
 
-    def is_held(self, joystick_id: int, button: int) -> bool:
-        return self.button_states[joystick_id][button] and self.previous_button_states[joystick_id][button]
+    def is_holding(self, joystick_id: int, button: int) -> bool:
+        return (
+            self.button_states[joystick_id][button]
+            and self.previous_button_states[joystick_id][button]
+        )
 
     def is_released(self, joystick_id: int, button: int) -> bool:
-        return not self.button_states[joystick_id][button] and self.previous_button_states[joystick_id][button]
+        return (
+            not self.button_states[joystick_id][button]
+            and self.previous_button_states[joystick_id][button]
+        )
 
     def get_axis(self, joystick_id: int, axis: int) -> float:
         return self.axis_states[joystick_id][axis]
-    
+
     def get_axes(self, joystick_id: int) -> List[float]:
         return self.axis_states[joystick_id]
 
     def add_joystick(self, joystick: pygame.joystick.Joystick) -> None:
+        if (joystick in self._joysticks):
+            return
+        
         joystick_id = joystick.get_id()
         self._joysticks.append(joystick)
-        self.button_states[joystick_id] = {button: False for button in range(10)}
         self.axis_states[joystick_id] = [0.0] * joystick.get_numaxes()
-        self.previous_button_states[joystick_id] = {button: False for button in range(10)}
+        self.button_states[joystick_id] = {
+            button: joystick.get_button(button) for button in range(GamepadButtons.NUM)
+        }
+        self.previous_button_states[joystick_id] = {
+            button: joystick.get_button(button) for button in range(GamepadButtons.NUM)
+        }
 
     def remove_joystick(self, joystick: pygame.joystick.Joystick) -> None:
         joystick_id = joystick.get_id()
