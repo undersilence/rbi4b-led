@@ -1,5 +1,4 @@
 import time
-from pygame import event, KEYDOWN, K_ESCAPE, JOYBUTTONDOWN
 from led_matrix import LEDMatrix
 from .base import BaseApp, GamepadButtons, VfxUtils
 from typing import List, Tuple

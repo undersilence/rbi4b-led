@@ -1,7 +1,6 @@
 import time
 import math
 from typing import List, Tuple
-from pygame import key, K_ESCAPE
 from led_matrix import LEDMatrix
 
 from .base import BaseApp, GamepadButtons, FONT, VfxUtils

@@ -32,11 +32,11 @@ class MenuApp(BaseApp):
             if self.current_row < len(self.apps):
                 self.apps[self.current_row].execute()
                 
-        axis_value = self.get_axis(0)  # Horizontal axis
-        if axis_value < -0.5:  # Left
+        axis0, axis1 = self.get_vector()
+        if axis0 < -0.5:  # Left
             self.target_row = self.current_row - 1
             self.direction = -1
-        elif axis_value > 0.5:  # Right
+        elif axis0 > 0.5:  # Right
             self.target_row = self.current_row + 1
             self.direction = 1
 

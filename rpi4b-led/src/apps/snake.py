@@ -1,19 +1,5 @@
 import random
 from typing import List, Tuple
-from pygame import (
-    Color,
-    event,
-    KEYDOWN,
-    K_UP,
-    K_DOWN,
-    K_LEFT,
-    K_RIGHT,
-    JOYBUTTONDOWN,
-    JOYBUTTONUP,
-    JOYAXISMOTION,
-    K_ESCAPE,
-    key,
-)
 from led_matrix import LEDMatrix
 from .base import BaseApp, GamepadButtons, FONT, VfxUtils
 import math
@@ -62,7 +48,7 @@ class SnakeApp(BaseApp):
         elif self.is_pressed(GamepadButtons.BACK):
             self.keep_running = False
 
-        axis_0, axis_1 = self.get_axes()
+        axis_0, axis_1 = self.get_vector()
         if axis_0 < -0.5 and self.direction != (1, 0):  # Left
             self.direction = (-1, 0)
         elif axis_0 > 0.5 and self.direction != (-1, 0):  # Right

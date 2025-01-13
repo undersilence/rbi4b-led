@@ -5,7 +5,13 @@ from led_matrix import LEDMatrix
 import math
 from typing import List, Tuple, Dict
 import logging
-from input_manager import InputManager, GamepadButtons
+from input_manager import (
+    GamepadType,
+    InputManager,
+    NintendoButtons,
+    VirtualButtons,
+    get_joystick_type,
+)
 
 FONT = {
     "0": ["###", "# #", "# #", "# #", "###"],
@@ -52,6 +58,43 @@ FONT = {
     "_": ["   ", "   ", "   ", "   ", "###"],
     " ": ["   ", "   ", "   ", "   ", "   "],
     ":": ["   ", " # ", "   ", " # ", "   "],
+}
+
+
+# Basic Input Buttons
+class GamepadButtons:
+    A = 0
+    B = 1
+    X = 2
+    Y = 3
+    LB = 4
+    RB = 5
+    BACK = 6
+    START = 7
+    NUM = 8
+
+
+InputMapping = {
+    GamepadType.NINTENDO: {
+        GamepadButtons.A: NintendoButtons.A,
+        GamepadButtons.B: NintendoButtons.B,
+        GamepadButtons.X: NintendoButtons.X,
+        GamepadButtons.Y: NintendoButtons.Y,
+        GamepadButtons.LB: NintendoButtons.L1,
+        GamepadButtons.RB: NintendoButtons.R1,
+        GamepadButtons.BACK: NintendoButtons.MINUS,
+        GamepadButtons.START: NintendoButtons.PLUS,
+    },
+    GamepadType.VIRTUAL: {
+        GamepadButtons.A: VirtualButtons.A,
+        GamepadButtons.B: VirtualButtons.B,
+        GamepadButtons.X: VirtualButtons.X,
+        GamepadButtons.Y: VirtualButtons.Y,
+        GamepadButtons.LB: VirtualButtons.LB,
+        GamepadButtons.RB: VirtualButtons.RB,
+        GamepadButtons.BACK: VirtualButtons.BACK,
+        GamepadButtons.START: VirtualButtons.START,
+    },
 }
 
 
@@ -136,25 +179,38 @@ class BaseApp:
         self._input_manager.add_joystick(joystick)
         self.connect_device()
 
+    def refresh_available_devices(self) -> None:
+        self._available_devices = [
+            joystick_info
+            for joystick_info in self._input_devices
+            if joystick_info is not None
+        ]
+
     def disconnect_device(self, joystick_id) -> None:
         for i in range(len(self._input_devices)):
-            if self._input_devices[i] == joystick_id:
+            if self._input_devices[i] is None:
+                continue
+            current_joystick_id, _ = self._input_devices[i][0]
+            if current_joystick_id == joystick_id:
                 self._input_devices[i] = None
-        
-        self._available_devices = [joystick_id for joystick_id in self._input_devices if joystick_id is not None]
+
+        self.refresh_available_devices()
 
     def connect_device(self) -> None:
-        joystick_ids = self._input_manager.get_joystick_ids()
+        joystick_id_types = [
+            (js.get_instance_id(), get_joystick_type(js))
+            for js in self._input_manager.joysticks
+        ]
 
         for i in range(len(self._input_devices)):
             if self._input_devices[i] is None:
-                for joystick_id in joystick_ids:
-                    if joystick_id not in self._input_devices:
-                        self._input_devices[i] = joystick_id
+                for joystick_info in joystick_id_types:
+                    if joystick_info not in self._input_devices:
+                        self._input_devices[i] = joystick_info
                         break
-                    
-        self._available_devices = [joystick_id for joystick_id in self._input_devices if joystick_id is not None]
-        
+
+        self.refresh_available_devices()
+
     def handle_events(self) -> None:
         for e in pygame.event.get():
             if e.type == pygame.JOYDEVICEADDED:
@@ -164,45 +220,59 @@ class BaseApp:
                 logging.info(f"Joystick {joystick.get_name()} added.")
 
             elif e.type == pygame.JOYDEVICEREMOVED:
-                for joystick in self._input_manager._joysticks:
+                for joystick in self._input_manager.joysticks:
                     if joystick.get_instance_id() == e.instance_id:
                         self.on_remove_joystick(joystick)
                         logging.info(f"Joystick {joystick.get_name()} removed.")
-    
-    def get_joystick_id(self, device_index: int = -1) -> int:
+            else:
+                logging.info(e)
+
+    def get_joystick_id_with_type(self, device_index: int = -1) -> int:
         """
         Get the joystick ID for the player at the given index, if default value is used, return the first available player ID.
         """
         if device_index < 0:
             return self._available_devices[0] if self._available_devices else None
         return self._input_devices[device_index]
-    
-    def is_pressed(self, button, device_index: int = -1):
-        joystick_id = self.get_joystick_id(device_index)
-        if joystick_id is None:
-            return False
-        return self._input_manager.is_pressed(joystick_id, button)
 
-    def is_holding(self, button, device_index: int = -1):
-        joystick_id = self.get_joystick_id(device_index)
-        if joystick_id is None:
+    def is_pressed(self, button: GamepadButtons, device_index: int = -1):
+        joystick_info = self.get_joystick_id_with_type(device_index)
+        if joystick_info is None:
             return False
-        return self._input_manager.is_holding(joystick_id, button)
-    
-    def is_released(self, button, device_index: int = -1):
-        joystick_id = self.get_joystick_id(device_index)
-        if joystick_id is None:
+        
+        joystick_id, joystick_type = joystick_info
+        device_button = InputMapping[joystick_type][button]
+        return self._input_manager.is_pressed(joystick_id, device_button)
+
+    def is_holding(self, button: GamepadButtons, device_index: int = -1):
+        joystick_info = self.get_joystick_id_with_type(device_index)
+        if joystick_info is None:
             return False
-        return self._input_manager.is_released(joystick_id, button)
-    
-    def get_axis(self, axis: int, device_index: int = -1):
-        joystick_id = self.get_joystick_id(device_index)
-        if joystick_id is None:
+        
+        joystick_id, joystick_type = joystick_info
+        device_button = InputMapping[joystick_type][button]
+        return self._input_manager.is_holding(joystick_id, device_button)
+
+    def is_released(self, button: GamepadButtons, device_index: int = -1):
+        joystick_info = self.get_joystick_id_with_type(device_index)
+        if joystick_info is None:
             return False
-        return self._input_manager.get_axis(joystick_id, axis)
-    
-    def get_axes(self, device_index: int = -1):
-        joystick_id = self.get_joystick_id(device_index)
-        if joystick_id is None:
+        
+        joystick_id, joystick_type = joystick_info
+        device_button = InputMapping[joystick_type][button]
+        return self._input_manager.is_released(joystick_id, device_button)
+
+    def get_vector(self, hat_id: int = 0, device_index: int = -1):
+        joystick_info = self.get_joystick_id_with_type(device_index)
+        if joystick_info is None:
             return [0, 0]
-        return self._input_manager.get_axes(joystick_id)
+        
+        joystick_id, joystick_type = joystick_info
+        if joystick_type == GamepadType.NINTENDO:
+            hat0, hat1 = self._input_manager.get_hat(joystick_id, hat_id)
+            return hat0, -hat1  # Invert the y-axis
+        else:
+            return (
+                self._input_manager.get_axis(joystick_id, 0),
+                self._input_manager.get_axis(joystick_id, 1),
+            )
