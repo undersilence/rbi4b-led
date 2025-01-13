@@ -80,8 +80,8 @@ InputMapping = {
         GamepadButtons.B: NintendoButtons.B,
         GamepadButtons.X: NintendoButtons.X,
         GamepadButtons.Y: NintendoButtons.Y,
-        GamepadButtons.LB: NintendoButtons.L1,
-        GamepadButtons.RB: NintendoButtons.R1,
+        GamepadButtons.LB: NintendoButtons.LEFT_BUMPER,
+        GamepadButtons.RB: NintendoButtons.RIGHT_BUMPER,
         GamepadButtons.BACK: NintendoButtons.MINUS,
         GamepadButtons.START: NintendoButtons.PLUS,
     },
@@ -190,7 +190,7 @@ class BaseApp:
         for i in range(len(self._input_devices)):
             if self._input_devices[i] is None:
                 continue
-            current_joystick_id, _ = self._input_devices[i][0]
+            current_joystick_id, _ = self._input_devices[i]
             if current_joystick_id == joystick_id:
                 self._input_devices[i] = None
 
@@ -269,8 +269,14 @@ class BaseApp:
         
         joystick_id, joystick_type = joystick_info
         if joystick_type == GamepadType.NINTENDO:
-            hat0, hat1 = self._input_manager.get_hat(joystick_id, hat_id)
-            return hat0, -hat1  # Invert the y-axis
+            dpad_up = self._input_manager.is_holding(joystick_id, NintendoButtons.D_PAD_UP)
+            dpad_down = self._input_manager.is_holding(joystick_id, NintendoButtons.D_PAD_DOWN)
+            dpad_left = self._input_manager.is_holding(joystick_id, NintendoButtons.D_PAD_LEFT)
+            dpad_right = self._input_manager.is_holding(joystick_id, NintendoButtons.D_PAD_RIGHT)
+            
+            x = -1 if dpad_left else 1 if dpad_right else 0
+            y = -1 if dpad_up else 1 if dpad_down else 0
+            return x, y
         else:
             return (
                 self._input_manager.get_axis(joystick_id, 0),

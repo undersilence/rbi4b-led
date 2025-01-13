@@ -25,7 +25,7 @@ class LEDMatrix:
                         actual_x = x * self.pixel_width + dx
                         actual_y = (self.height - 1 - y) * self.pixel_height + dy  # Adjust for physical coordinate system
                         led_index = self._get_led_index(actual_x, actual_y)
-                        self.strip.setPixelColor(led_index, Color(*color))
+                        self.strip.setPixelColor(led_index, Color(color[1], color[0], color[2]))  # Ensure correct RGB order
 
     def _get_led_index(self, x, y):
         """Calculate the actual LED index for a given (x, y) coordinate."""

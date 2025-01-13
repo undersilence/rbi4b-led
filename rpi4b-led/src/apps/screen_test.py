@@ -97,13 +97,12 @@ class ScreenTestApp(BaseApp):
         for y in range(self.matrix.height):
             for x in range(self.matrix.width):
                 # Calculate brightness for each row, decreasing from bottom to top
-                brightness = y / (self.matrix.height + 1)
+                brightness = y / self.matrix.height
                 # Apply a sine wave for breathing effect with added randomness
                 frequency = self.breathing_frequencies[y][x]
                 breath = (math.sin(self.effect_timer * 2 * math.pi * frequency) + 1) / 2
                 breath = 0.5 + 0.5 * breath  # Ensure it doesn't go completely dark
                 final_brightness = brightness * breath
                 # Set the pixel color with the calculated brightness
-                final_color = tuple(int(c * math.sqrt(final_brightness)) for c in base_color)
-                # final_color = color_temperature_to_rgb(3000 * final_brightness)
+                final_color = tuple(int(c * final_brightness) for c in base_color)
                 self.matrix.set_pixel(x, y, final_color)

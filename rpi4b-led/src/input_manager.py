@@ -17,19 +17,23 @@ class VirtualButtons:
 
 
 class NintendoButtons:
-    B = 0
-    A = 1
+    A = 0
+    B = 1
     X = 2
     Y = 3
-    L1 = 5
-    R1 = 6
-    L2 = 7
-    R2 = 8
-    MINUS = 9
-    PLUS = 10
-    HOME = 11
-    NUM = 15
-
+    MINUS = 4
+    HOME = 5
+    PLUS = 6
+    L_STICK_IN = 7
+    R_STICK_IN = 8
+    LEFT_BUMPER = 9
+    RIGHT_BUMPER = 10
+    D_PAD_UP = 11
+    D_PAD_DOWN = 12
+    D_PAD_LEFT = 13
+    D_PAD_RIGHT = 14
+    CAPTURE = 15
+    NUM = 16
 
 
 class GamepadType:
@@ -88,6 +92,8 @@ class InputManager:
                 self.button_states[joystick_id]
             )
             self.update_joystick_states(joystick_id, joystick)
+            # if self.previous_button_states != self.button_states:
+            #     logging.info(self.button_states)
 
     def is_pressed(self, joystick_id: int, button: int) -> bool:
         return (
