@@ -173,7 +173,7 @@ class BaseApp:
 
     def on_remove_joystick(self, joystick) -> None:
         self._input_manager.remove_joystick(joystick)
-        self.disconnect_device(joystick.get_id())
+        self.disconnect_device(joystick.get_instance_id())
 
     def on_add_joystick(self, joystick) -> None:
         self._input_manager.add_joystick(joystick)
