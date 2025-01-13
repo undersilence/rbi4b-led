@@ -97,7 +97,7 @@ class ScreenTestApp(BaseApp):
         for y in range(self.matrix.height):
             for x in range(self.matrix.width):
                 # Calculate brightness for each row, decreasing from bottom to top
-                brightness = y / self.matrix.height
+                brightness = (y + 1) / self.matrix.height
                 # Apply a sine wave for breathing effect with added randomness
                 frequency = self.breathing_frequencies[y][x]
                 breath = (math.sin(self.effect_timer * 2 * math.pi * frequency) + 1) / 2
