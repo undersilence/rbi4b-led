@@ -3,8 +3,33 @@ from led_matrix import LEDMatrix
 from .base import BaseApp, GamepadButtons, VfxUtils
 from typing import List, Tuple
 import math
+import random
 
+def color_temperature_to_rgb(kelvin: int) -> Tuple[int, int, int]:
+    # Convert color temperature in Kelvin to RGB
+    temp = kelvin / 100.0
+    if temp <= 66:
+        red = 255
+        green = temp
+        green = 99.4708025861 * math.log(green) - 161.1195681661
+        if temp <= 19:
+            blue = 0
+        else:
+            blue = temp - 10
+            blue = 138.5177312231 * math.log(blue) - 305.0447927307
+    else:
+        red = temp - 60
+        red = 329.698727446 * (red ** -0.1332047592)
+        green = temp - 60
+        green = 288.1221695283 * (green ** -0.0755148492)
+        blue = 255
 
+    return (
+        max(0, min(255, int(red))),
+        max(0, min(255, int(green))),
+        max(0, min(255, int(blue))),
+    )
+    
 class ScreenTestApp(BaseApp):
     ICON = [" ######", " #    #", " #    #", " #    #", " #    #", " #    #", " ######"]
     EFFECT_DURATION = 3600 * 24 * 365 * 100  # 100 years
@@ -12,8 +37,12 @@ class ScreenTestApp(BaseApp):
     def reset(self):
         self.clear_before_render = False  # No need to clean the screen before rendering
         self.effect_index = 0
-        self.effects = [self.white_screen, self.color_wipe, self.rainbow, self.rainbow_cycle]
+        self.effects = [self.breathing_wall, self.white_screen, self.color_wipe, self.rainbow, self.rainbow_cycle]
         self.effect_timer = 0
+        self.breathing_frequencies = [
+            [random.uniform(0.05, 0.15) for _ in range(self.matrix.width)]
+            for _ in range(self.matrix.height)
+        ]
 
     def update(self, delta_time: float) -> None:
         
@@ -62,3 +91,19 @@ class ScreenTestApp(BaseApp):
                     y,
                     VfxUtils.wheel((int(x * 256 / self.matrix.width) + count) & 255),
                 )
+                
+    def breathing_wall(self, wait_ms=10) -> None:
+        base_color = color_temperature_to_rgb(3000)
+        for y in range(self.matrix.height):
+            for x in range(self.matrix.width):
+                # Calculate brightness for each row, decreasing from bottom to top
+                brightness = y / (self.matrix.height + 1)
+                # Apply a sine wave for breathing effect with added randomness
+                frequency = self.breathing_frequencies[y][x]
+                breath = (math.sin(self.effect_timer * 2 * math.pi * frequency) + 1) / 2
+                breath = 0.5 + 0.5 * breath  # Ensure it doesn't go completely dark
+                final_brightness = brightness * breath
+                # Set the pixel color with the calculated brightness
+                final_color = tuple(int(c * math.sqrt(final_brightness)) for c in base_color)
+                # final_color = color_temperature_to_rgb(3000 * final_brightness)
+                self.matrix.set_pixel(x, y, final_color)

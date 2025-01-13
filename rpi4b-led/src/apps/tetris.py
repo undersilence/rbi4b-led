@@ -22,27 +22,26 @@ TETROMINOS = {
 # Wallkick offsets for different rotations (SRS)
 WALLKICK_OFFSETS = {
     "I": {
-        (0, 1): [(0, 0), (-2, 0), (1, 0), (-2, -1), (1, 2)],
-        (1, 0): [(0, 0), (2, 0), (-1, 0), (2, 1), (-1, -2)],
-        (1, 2): [(0, 0), (-1, 0), (2, 0), (-1, 2), (2, -1)],
-        (2, 1): [(0, 0), (1, 0), (-2, 0), (1, -2), (-2, 1)],
-        (2, 3): [(0, 0), (2, 0), (-1, 0), (2, 1), (-1, -2)],
-        (3, 2): [(0, 0), (-2, 0), (1, 0), (-2, -1), (1, 2)],
-        (3, 0): [(0, 0), (1, 0), (-2, 0), (1, -2), (-2, 1)],
-        (0, 3): [(0, 0), (-1, 0), (2, 0), (-1, 2), (2, -1)],
+        (0, 1): [(0, 0), (0, -2), (0, 1), (-1, -2), (2, 1)],
+        (1, 0): [(0, 0), (0, 2), (0, -1), (1, 2), (-2, -1)],
+        (1, 2): [(0, 0), (0, -1), (0, 2), (2, -1), (-1, 2)],
+        (2, 1): [(0, 0), (0, 1), (0, -2), (-2, 1), (1, -2)],
+        (2, 3): [(0, 0), (0, 2), (0, -1), (1, 2), (-2, -1)],
+        (3, 2): [(0, 0), (0, -2), (0, 1), (-1, -2), (2, 1)],
+        (3, 0): [(0, 0), (0, 1), (0, -2), (-2, 1), (1, -2)],
+        (0, 3): [(0, 0), (0, -1), (0, 2), (2, -1), (-1, 2)],
     },
     "JLSTZ": {
-        (0, 1): [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)],
-        (1, 0): [(0, 0), (1, 0), (1, -1), (0, 2), (1, 2)],
-        (1, 2): [(0, 0), (1, 0), (1, -1), (0, 2), (1, 2)],
-        (2, 1): [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)],
-        (2, 3): [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)],
-        (3, 2): [(0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)],
-        (3, 0): [(0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)],
-        (0, 3): [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)],
+        (0, 1): [(0, 0), (0, -1), (0, 1), (-1, -1), (1, 2)],
+        (1, 0): [(0, 0), (0, 1), (0, -1), (1, 1), (-1, -2)],
+        (1, 2): [(0, 0), (0, 1), (0, -1), (1, 1), (-1, -2)],
+        (2, 1): [(0, 0), (0, -1), (0, 1), (-1, -1), (1, 2)],
+        (2, 3): [(0, 0), (0, 1), (0, -1), (1, 1), (-1, -2)],
+        (3, 2): [(0, 0), (0, -1), (0, 1), (-1, -1), (1, 2)],
+        (3, 0): [(0, 0), (0, -1), (0, 1), (-1, -1), (1, 2)],
+        (0, 3): [(0, 0), (0, 1), (0, -1), (1, 1), (-1, -2)],
     },
 }
-
 
 class TetrisApp(BaseApp):
     ICON = [" ###   ", " # #   ", " # ####", " #    #", " #### #", "    # #", "    ###"]
@@ -144,13 +143,6 @@ class TetrisApp(BaseApp):
         new_rotation_state = (self.rotation_state + (1 if clockwise else -1)) % 4
         rotated_piece = self._rotate_piece(self.current_piece, clockwise)
 
-        # First try to rotate without wallkick
-        if self._valid_position(rotated_piece, self.piece_x, self.piece_y):
-            self.current_piece = rotated_piece
-            self.rotation_state = new_rotation_state
-            return True
-
-        # If failed, try wallkick
         for offset_x, offset_y in WALLKICK_OFFSETS[piece_type][
             (self.rotation_state, new_rotation_state)
         ]:
@@ -187,7 +179,7 @@ class TetrisApp(BaseApp):
         if axis_0 < -0.8 and self.hard_drop_ready:  # Hard drop
             while self._valid_position(self.current_piece, self.piece_x + 1, self.piece_y):
                 self.piece_x += 1
-            self.drop_timer = self.drop_timer * 2 # Force immediate merge
+            self.drop_timer = self.drop_interval # Force immediate merge
             self.hard_drop_ready = False
         elif axis_0 > 0.8 and self._valid_position(self.current_piece, self.piece_x + 1, self.piece_y):  # Soft drop
             self.piece_x += 1
